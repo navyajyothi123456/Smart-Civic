@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Report Details | CivicLens</title>
+  <link rel="stylesheet" href="../css/main.css" />
+
+  <style>
+    body {
+      background: #f4f6f8;
+    }
+
+    .details-container {
+      max-width: 760px;
+      margin: 60px auto;
+      padding: 16px;
+    }
+
+    .details-card {
+      background: #fff;
+      padding: 28px;
+      border-radius: 16px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, .08);
+    }
+
+    label {
+      display: block;
+      margin-top: 16px;
+      font-weight: 600;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px;
+      margin-top: 6px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+    }
+
+    #map {
+      height: 300px;
+      margin-top: 12px;
+      border-radius: 10px;
+    }
+
+    button {
+      margin-top: 24px;
+      width: 100%;
+      padding: 14px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+<header class="header">
+  <h1 style="text-align:center">CivicLens</h1>
+</header>
+
+<section class="details-container">
+  <div class="details-card">
+
+    <h2 id="pageTitle"></h2>
+    <p id="selectedCategory"></p>
+
+    <form id="reportForm">
+
+      <label id="subIssueLabel"></label>
+      <select id="subIssue" required></select>
+
+      <label id="descLabel"></label>
+      <textarea id="description" rows="4" required></textarea>
+
+      <label id="imageLabel"></label>
+      <input type="file" id="image" accept="image/*" />
+
+      <label id="locationLabel"></label>
+      <div id="map"></div>
+
+      <button type="submit" id="submitBtn"></button>
+
+    </form>
+  </div>
+</section>
+
+<!-- 🔥 FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
+<!-- 🔥 GOOGLE MAP -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAeqE7ED6tR1VbVKET7_UXpAifwTvI0byI&callback=initMap" defer></script>
+
+<script>
+/* ================= LANGUAGE ================= */
+const lang = localStorage.getItem("lang") || "en";
+
+const translations = {
+  en: {
+    labels: {
+      subIssue: "Sub Issue",
+      description: "Description",
+      image: "Upload Image (optional)",
+      location: "Select Location",
+      submit: "Submit Complaint",
+      selected: "Selected Category:"
+    },
+    messages: {
+      selectLocation: "Please select location on map",
+      success: "Complaint submitted successfully"
+    }
+  },
+  te: {
+    labels: {
+      subIssue: "ఉప సమస్య",
+      description: "వివరణ",
+      image: "చిత్రాన్ని అప్‌లోడ్ చేయండి (ఐచ్ఛికం)",
+      location: "స్థానాన్ని ఎంచుకోండి",
+      submit: "ఫిర్యాదు సమర్పించండి",
+      selected: "ఎంచుకున్న విభాగం:"
+    },
+    messages: {
+      selectLocation: "దయచేసి మ్యాప్‌లో స్థానం ఎంచుకోండి",
+      success: "మీ ఫిర్యాదు విజయవంతంగా నమోదు అయింది"
+    }
+  },
+  hi: {
+    labels: {
+      subIssue: "उप समस्या",
+      description: "विवरण",
+      image: "छवि अपलोड करें (वैकल्पिक)",
+      location: "स्थान चुनें",
+      submit: "शिकायत दर्ज करें",
+      selected: "चयनित श्रेणी:"
+    },
+    messages: {
+      selectLocation: "कृपया मानचित्र पर स्थान चुनें",
+      success: "शिकायत सफलतापूर्वक दर्ज की गई"
+    }
+  }
+};
+
+/* ================= CATEGORY & ISSUES ================= */
+const params = new URLSearchParams(window.location.search);
+const categoryKey = params.get("category");
+
+const categories = {
+  road: { en: "Road & Transport", te: "రోడ్లు & రవాణా", hi: "सड़क और परिवहन" },
+  water: { en: "Water Supply", te: "నీటి సరఫరా", hi: "जल आपूर्ति" },
+  electricity: { en: "Electricity", te: "విద్యుత్", hi: "बिजली" },
+  garbage: { en: "Garbage & Sanitation", te: "చెత్త & పారిశుధ్యం", hi: "कचरा और स्वच्छता" },
+  drainage: { en: "Drainage & Sewage", te: "డ్రెయినేజ్", hi: "जल निकासी" },
+  safety: { en: "Street Safety", te: "వీధి భద్రత", hi: "सड़क सुरक्षा" },
+  public: { en: "Public Facilities", te: "ప్రజా సౌకర్యాలు", hi: "सार्वजनिक सुविधाएँ" },
+  pollution: { en: "Pollution & Noise", te: "కాలుష్యం", hi: "प्रदूषण" },
+  animal: { en: "Animal Issues", te: "జంతు సమస్యలు", hi: "पशु समस्याएँ" },
+  emergency: { en: "Emergency", te: "అత్యవసరం", hi: "आपातकाल" }
+};
+
+const issues = {
+  road: { en: ["Potholes"], te: ["గుంతలు"], hi: ["गड्ढे"] },
+  water: { en: ["No Water"], te: ["నీరు లేదు"], hi: ["पानी नहीं"] },
+  electricity: { en: ["Power Cut"], te: ["విద్యుత్ కోత"], hi: ["बिजली कटौती"] },
+  garbage: { en: ["Garbage Overflow"], te: ["చెత్త పొంగిపొర్లడం"], hi: ["कचरा भर जाना"] }
+};
+
+/* ================= APPLY LANGUAGE ================= */
+document.getElementById("pageTitle").innerText = categories[categoryKey][lang];
+document.getElementById("selectedCategory").innerText =
+  `${translations[lang].labels.selected} ${categories[categoryKey][lang]}`;
+
+document.getElementById("subIssueLabel").innerText = translations[lang].labels.subIssue;
+document.getElementById("descLabel").innerText = translations[lang].labels.description;
+document.getElementById("imageLabel").innerText = translations[lang].labels.image;
+document.getElementById("locationLabel").innerText = translations[lang].labels.location;
+document.getElementById("submitBtn").innerText = translations[lang].labels.submit;
+
+/* ================= SUB ISSUE ================= */
+const subIssueSelect = document.getElementById("subIssue");
+issues[categoryKey][lang].forEach(issue => {
+  const opt = document.createElement("option");
+  opt.value = issue;
+  opt.textContent = issue;
+  subIssueSelect.appendChild(opt);
+});
+
+/* ================= MAP ================= */
+let selectedLat = null;
+let selectedLng = null;
+let map, marker;
+
+function initMap() {
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 17.385044, lng: 78.486671 },
+    zoom: 12
+  });
+
+  marker = new google.maps.Marker({ map });
+
+  map.addListener("click", e => {
+    selectedLat = e.latLng.lat();
+    selectedLng = e.latLng.lng();
+    marker.setPosition(e.latLng);
+  });
+}
+
+/* ================= FIREBASE ================= */
+firebase.initializeApp({
+  apiKey: "AIzaSyAeqE7ED6tR1VbVKET7_UXpAifwTvI0byI",
+  authDomain: "smart-civic-portal-6e6d9.firebaseapp.com",
+  projectId: "smart-civic-portal-6e6d9",
+  storageBucket: "smart-civic-portal-6e6d9.appspot.com"
+});
+
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+/* ================= SUBMIT ================= */
+document.getElementById("reportForm").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  if (!selectedLat) {
+    alert(translations[lang].messages.selectLocation);
+    return;
+  }
+
+  await db.collection("reports").add({
+    categoryKey,
+    category: categories[categoryKey][lang],
+    subIssue: subIssueSelect.value,
+    description: document.getElementById("description").value,
+    language: lang,
+    location: { lat: selectedLat, lng: selectedLng },
+    status: "Submitted",
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  alert(translations[lang].messages.success);
+  window.location.href = "track.html";
+});
+</script>
+
+</body>
+</html>

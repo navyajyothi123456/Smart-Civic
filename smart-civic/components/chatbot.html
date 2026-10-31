@@ -1,0 +1,159 @@
+<!-- 🤖 CHATBOT FLOAT BUTTON -->
+<div id="chatbotToggle" style="
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #2563eb;
+  color: white;
+  padding: 14px 16px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  z-index: 999999;">
+  🤖
+</div>
+
+<!-- 💬 CHATBOT BOX -->
+<div id="chatbotBox" style="
+  display: none;
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 360px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  z-index: 999999;
+  overflow: hidden;">
+
+  <div style="background:#2563eb;color:white;padding:10px;text-align:center;">
+    🧠 Civic Help Assistant
+  </div>
+
+  <div id="chat" style="height:300px;overflow-y:auto;padding:10px;"></div>
+  <div id="options" style="padding:10px;border-top:1px solid #e5e7eb;"></div>
+</div>
+
+<script>
+/* ================= TOGGLE ================= */
+const toggle = document.getElementById("chatbotToggle");
+const box = document.getElementById("chatbotBox");
+
+toggle.onclick = () => {
+  box.style.display = box.style.display === "none" ? "block" : "none";
+};
+
+/* ================= STATE ================= */
+const chat = document.getElementById("chat");
+const options = document.getElementById("options");
+
+// 🔑 USE SAME LANGUAGE AS WEBSITE
+let language = localStorage.getItem("lang") || "en";
+
+/* ================= HELPERS ================= */
+function bot(msg) {
+  chat.innerHTML += `<div style="background:#e5e7eb;padding:8px;margin:6px 0;border-radius:8px;">${msg}</div>`;
+  chat.scrollTop = chat.scrollHeight;
+}
+function user(msg) {
+  chat.innerHTML += `<div style="background:#2563eb;color:white;padding:8px;margin:6px 0;border-radius:8px;text-align:right;">${msg}</div>`;
+  chat.scrollTop = chat.scrollHeight;
+}
+function clearOptions() {
+  options.innerHTML = "";
+}
+function addOption(text, action) {
+  const btn = document.createElement("button");
+  btn.innerText = text;
+  btn.style.margin = "4px";
+  btn.style.padding = "6px 10px";
+  btn.style.border = "none";
+  btn.style.borderRadius = "6px";
+  btn.style.background = "#10b981";
+  btn.style.color = "white";
+  btn.style.cursor = "pointer";
+  btn.onclick = action;
+  options.appendChild(btn);
+}
+
+/* ================= TEXT BY LANGUAGE ================= */
+const T = {
+  en: {
+    welcome: "👋 Hello! Welcome to Civic Help Assistant.",
+    ask: "Do you want to submit a civic issue?",
+    selectCat: "Select issue category:",
+    roadIssue: "Select road-related problem:",
+    yes: "Yes",
+    no: "No",
+    openForm: "👉 Open Report Form"
+  },
+  te: {
+    welcome: "👋 హలో! సివిక్ సహాయకునికి స్వాగతం.",
+    ask: "మీరు సమస్యను నివేదించాలనుకుంటున్నారా?",
+    selectCat: "సమస్య రకాన్ని ఎంచుకోండి:",
+    roadIssue: "రోడ్డు సమస్యను ఎంచుకోండి:",
+    yes: "అవును",
+    no: "కాదు",
+    openForm: "👉 ఫిర్యాదు ఫారమ్ తెరవండి"
+  },
+  hi: {
+    welcome: "👋 नमस्ते! सिविक सहायक में आपका स्वागत है।",
+    ask: "क्या आप समस्या दर्ज करना चाहते हैं?",
+    selectCat: "समस्या का प्रकार चुनें:",
+    roadIssue: "सड़क समस्या चुनें:",
+    yes: "हाँ",
+    no: "नहीं",
+    openForm: "👉 रिपोर्ट फॉर्म खोलें"
+  }
+};
+
+/* ================= NAVIGATION ================= */
+function showNavigation() {
+  addOption("🏠 Home", () => window.location.href = "index.html");
+  addOption("📝 Report Issue", () => window.location.href = "report.html");
+  addOption("📊 Track Issues", () => window.location.href = "track.html");
+}
+
+/* ================= START ================= */
+bot(T[language].welcome);
+bot(T[language].ask);
+
+addOption(T[language].yes, showCategories);
+addOption(T[language].no, showNavigation);
+
+/* ================= CATEGORY ================= */
+function showCategories() {
+  clearOptions();
+  bot(T[language].selectCat);
+
+  addOption("🛣️ Road & Transport", () => roadIssues());
+  addOption("🚰 Water Supply", () => openReport("water"));
+  addOption("💡 Electricity", () => openReport("electricity"));
+  addOption("🗑️ Garbage", () => openReport("garbage"));
+}
+
+/* ================= ROAD SUB ISSUES ================= */
+function roadIssues() {
+  clearOptions();
+  bot(T[language].roadIssue);
+
+  addOption("Potholes", () => openReport("road", "Potholes"));
+  addOption("Broken Road", () => openReport("road", "Road Damage"));
+  addOption("Traffic Signal Issue", () => openReport("road", "Traffic Signal Issue"));
+}
+
+/* ================= OPEN REPORT ================= */
+function openReport(category, issue = "") {
+  clearOptions();
+  user(issue || category);
+
+  bot("📸 Image optional<br>🗺️ Location required");
+
+  addOption(T[language].openForm, () => {
+    window.location.href =
+      `report-details.html?category=${category}`;
+  });
+
+  showNavigation();
+}
+</script>
